@@ -1,0 +1,371 @@
+<!DOCTYPE html>  
+<html lang="en">  
+<head>  
+    <meta charset="UTF-8">  
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+    <title>Flash Loan Arbitrage</title>  
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>  
+    <script src="https://cdn.jsdelivr.net/npm/@metamask/detect-provider/dist/detect-provider.min.js"></script>  
+    <style>  
+        :root {  
+            --dark-green: #0a2e0a;  
+            --medium-green: #1a5a1a;  
+            --light-green: #2e8b2e;  
+            --highlight: #3cb371;  
+            --text: #e0f7e0;  
+        }  
+        
+        body {  
+            font-family: 'Courier New', monospace;  
+            background-color: var(--dark-green);  
+            color: var(--text);  
+            margin: 0;  
+            padding: 20px;  
+            line-height: 1.6;  
+        }  
+        
+        .container {  
+            max-width: 800px;  
+            margin: 0 auto;  
+            padding: 20px;  
+            background-color: var(--medium-green);  
+            border-radius: 10px;  
+            box-shadow: 0 0 20px rgba(0, 50, 0, 0.5);  
+            border: 1px solid var(--highlight);  
+        }  
+        
+        h1 {  
+            color: var(--highlight);  
+            text-align: center;  
+            border-bottom: 2px solid var(--light-green);  
+            padding-bottom: 10px;  
+        }  
+        
+        .section {  
+            margin-bottom: 25px;  
+            padding: 15px;  
+            background-color: rgba(10, 40, 10, 0.5);  
+            border-radius: 8px;  
+            border-left: 4px solid var(--highlight);  
+        }  
+        
+        label {  
+            display: block;  
+            margin-bottom: 8px;  
+            font-weight: bold;  
+        }  
+        
+        input, select, button {  
+            width: 100%;  
+            padding: 10px;  
+            margin-bottom: 15px;  
+            border-radius: 5px;  
+            border: 1px solid var(--light-green);  
+            background-color: var(--dark-green);  
+            color: var(--text);  
+        }  
+        
+        button {  
+            background-color: var(--light-green);  
+            color: #fff;  
+            font-weight: bold;  
+            cursor: pointer;  
+            transition: all 0.3s;  
+            border: none;  
+        }  
+        
+        button:hover {  
+            background-color: var(--highlight);  
+            transform: translateY(-2px);  
+        }  
+        
+        .status {  
+            padding: 10px;  
+            border-radius: 5px;  
+            margin-top: 10px;  
+            display: none;  
+        }  
+        
+        .success {  
+            background-color: #2e8b2e;  
+            display: block;  
+        }  
+        
+        .error {  
+            background-color: #8b2e2e;  
+            display: block;  
+        }  
+        
+        .info {  
+            font-size: 0.9em;  
+            color: #a0d6a0;  
+            margin-top: 5px;  
+        }  
+        
+        .network-info {  
+            text-align: right;  
+            font-size: 0.8em;  
+            color: var(--highlight);  
+        }  
+        
+        .terminal {  
+            background-color: #001a00;  
+            color: #00ff00;  
+            padding: 15px;  
+            border-radius: 5px;  
+            font-family: monospace;  
+            height: 150px;  
+            overflow-y: auto;  
+            margin-top: 20px;  
+            border: 1px solid var(--light-green);  
+        }  
+        
+        .terminal p {  
+            margin: 0;  
+            line-height: 1.4;  
+        }  
+    </style>  
+</head>  
+<body>  
+    <div class="container">  
+        <h1>Flash Loan Arbitrage Dashboard</h1>  
+        
+        <div class="network-info" id="networkInfo">Not connected</div>  
+        
+        <div class="section">  
+            <h2>Wallet Connection</h2>  
+            <button id="connectWallet">Connect MetaMask</button>  
+            <div id="walletAddress" class="info"></div>  
+        </div>  
+        
+        <div class="section">  
+            <h2>Arbitrage Parameters</h2>  
+            <label for="buyRouter">Buy Router:</label>  
+            <select id="buyRouter">  
+                <option value="0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff">QuickSwap (0xa5E...678ff)</option>  
+                <option value="0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506">SushiSwap (0x1b0...7506)</option>  
+            </select>  
+            
+            <label for="sellRouter">Sell Router:</label>  
+            <select id="sellRouter">  
+                <option value="0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506">SushiSwap (0x1b0...7506)</option>  
+                <option value="0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff">QuickSwap (0xa5E...678ff)</option>  
+            </select>  
+            
+            <label for="tokenAddress">Token Address:</label>  
+            <input type="text" id="tokenAddress" placeholder="0x...">  
+            
+            <label for="amountIn">Amount in USDC (units):</label>  
+            <input type="number" id="amountIn" placeholder="1000000 (1 USDC = 1000000 units)">  
+            
+            <label for="useFlashLoan">Use Flash Loan:</label>  
+            <select id="useFlashLoan">  
+                <option value="true">Yes</option>  
+                <option value="false">No</option>  
+            </select>  
+            
+            <div id="flashLoanProviderContainer">  
+                <label for="flashLoanProvider">Flash Loan Provider:</label>  
+                <select id="flashLoanProvider">  
+                    <option value="AAVE">AAVE</option>  
+                    <option value="DODO">DODO</option>  
+                </select>  
+            </div>  
+        </div>  
+        
+        <div class="section">  
+            <h2>Execute Arbitrage</h2>  
+            <button id="executeArbitrage">Execute Arbitrage Strategy</button>  
+            <div id="transactionStatus" class="status"></div>  
+        </div>  
+        
+        <div class="section">  
+            <h2>Contract Actions</h2>  
+            <label for="withdrawToken">Withdraw Token:</label>  
+            <input type="text" id="withdrawToken" placeholder="Token address (0x...)">  
+            <button id="withdraw">Withdraw</button>  
+            <div id="withdrawStatus" class="status"></div>  
+        </div>  
+        
+        <div class="terminal" id="transactionLog">  
+            <p>> System ready. Connect wallet to begin.</p>  
+        </div>  
+    </div>  
+
+    <script>  
+        // Contract ABI would go here (truncated for example)  
+        const contractABI = [ /* Your contract ABI */ ];  
+        const contractAddress = "0x..."; // Your deployed contract address  
+        
+        let web3;  
+        let contract;  
+        let accounts = [];  
+        
+        // DOM elements  
+        const connectWalletBtn = document.getElementById('connectWallet');  
+        const executeArbitrageBtn = document.getElementById('executeArbitrage');  
+        const withdrawBtn = document.getElementById('withdraw');  
+        const walletAddressDiv = document.getElementById('walletAddress');  
+        const networkInfoDiv = document.getElementById('networkInfo');  
+        const transactionLog = document.getElementById('transactionLog');  
+        const flashLoanProviderContainer = document.getElementById('flashLoanProviderContainer');  
+        const useFlashLoanSelect = document.getElementById('useFlashLoan');  
+        
+        // Initialize  
+        window.addEventListener('load', async () => {  
+            await initWeb3();  
+            updateUI();  
+            
+            // Show/hide flash loan provider based on selection  
+            useFlashLoanSelect.addEventListener('change', () => {  
+                flashLoanProviderContainer.style.display =   
+                    useFlashLoanSelect.value === 'true' ? 'block' : 'none';  
+            });  
+        });  
+        
+        async function initWeb3() {  
+            if (window.ethereum) {  
+                web3 = new Web3(window.ethereum);  
+                try {  
+                    accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });  
+                    contract = new web3.eth.Contract(contractABI, contractAddress);  
+                    
+                    // Refresh when account changes  
+                    window.ethereum.on('accountsChanged', (newAccounts) => {  
+                        accounts = newAccounts;  
+                        updateUI();  
+                    });  
+                    
+                    // Refresh when network changes  
+                    window.ethereum.on('chainChanged', () => {  
+                        window.location.reload();  
+                    });  
+                    
+                    // Get network info  
+                    const chainId = await web3.eth.getChainId();  
+                    if (chainId === 137) {  
+                        networkInfoDiv.textContent = "Connected to Polygon Mainnet";  
+                    } else {  
+                        networkInfoDiv.textContent = "Please connect to Polygon Mainnet";  
+                    }  
+                    
+                } catch (error) {  
+                    logToTerminal(`Error: ${error.message}`);  
+                }  
+            } else {  
+                logToTerminal("MetaMask not detected. Please install MetaMask.");  
+            }  
+        }  
+        
+        connectWalletBtn.addEventListener('click', async () => {  
+            if (window.ethereum) {  
+                try {  
+                    accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });  
+                    updateUI();  
+                    logToTerminal("Wallet connected successfully");  
+                } catch (error) {  
+                    logToTerminal(`Error connecting wallet: ${error.message}`);  
+                }  
+            } else {  
+                logToTerminal("MetaMask not detected. Please install MetaMask.");  
+            }  
+        });  
+        
+        executeArbitrageBtn.addEventListener('click', async () => {  
+            if (!accounts.length) {  
+                logToTerminal("Please connect your wallet first");  
+                return;  
+            }  
+            
+            const buyRouter = document.getElementById('buyRouter').value;  
+            const sellRouter = document.getElementById('sellRouter').value;  
+            const tokenAddress = document.getElementById('tokenAddress').value;  
+            const amountIn = document.getElementById('amountIn').value;  
+            const useFlashLoan = document.getElementById('useFlashLoan').value === 'true';  
+            const flashLoanProvider = document.getElementById('flashLoanProvider').value;  
+            
+            if (!tokenAddress || !amountIn) {  
+                logToTerminal("Please fill all required fields");  
+                return;  
+            }  
+            
+            try {  
+                logToTerminal("Executing arbitrage...");  
+                
+                await contract.methods.executeArbitrage(  
+                    buyRouter,  
+                    sellRouter,  
+                    tokenAddress,  
+                    amountIn,  
+                    useFlashLoan,  
+                    flashLoanProvider  
+                ).send({ from: accounts[0] });  
+                
+                logToTerminal("Arbitrage executed successfully!");  
+                showStatus("Transaction successful!", "success");  
+            } catch (error) {  
+                logToTerminal(`Error executing arbitrage: ${error.message}`);  
+                showStatus(`Error: ${error.message}`, "error");  
+            }  
+        });  
+        
+        withdrawBtn.addEventListener('click', async () => {  
+            if (!accounts.length) {  
+                logToTerminal("Please connect your wallet first");  
+                return;  
+            }  
+            
+            const tokenAddress = document.getElementById('withdrawToken').value;  
+            
+            if (!tokenAddress) {  
+                logToTerminal("Please enter a token address");  
+                return;  
+            }  
+            
+            try {  
+                logToTerminal(`Withdrawing token ${tokenAddress}...`);  
+                
+                await contract.methods.withdrawToken(  
+                    tokenAddress  
+                ).send({ from: accounts[0] });  
+                
+                logToTerminal("Withdrawal successful!");  
+                showStatus("Withdrawal successful!", "success", "withdrawStatus");  
+            } catch (error) {  
+                logToTerminal(`Error withdrawing token: ${error.message}`);  
+                showStatus(`Error: ${error.message}`, "error", "withdrawStatus");  
+            }  
+        });  
+        
+        function updateUI() {  
+            if (accounts.length > 0) {  
+                connectWalletBtn.textContent = "Connected";  
+                connectWalletBtn.style.backgroundColor = "#3cb371";  
+                walletAddressDiv.textContent = `Account: ${accounts[0].substring(0, 6)}...${accounts[0].substring(38)}`;  
+            } else {  
+                connectWalletBtn.textContent = "Connect MetaMask";  
+                connectWalletBtn.style.backgroundColor = "";  
+                walletAddressDiv.textContent = "";  
+            }  
+        }  
+        
+        function logToTerminal(message) {  
+            const now = new Date();  
+            const timestamp = now.toLocaleTimeString();  
+            transactionLog.innerHTML += `<p>> [${timestamp}] ${message}</p>`;  
+            transactionLog.scrollTop = transactionLog.scrollHeight;  
+        }  
+        
+        function showStatus(message, type, elementId = "transactionStatus") {  
+            const statusDiv = document.getElementById(elementId);  
+            statusDiv.textContent = message;  
+            statusDiv.className = `status ${type}`;  
+            
+            // Hide after 5 seconds  
+            setTimeout(() => {  
+                statusDiv.style.display = 'none';  
+            }, 5000);  
+        }  
+    </script>  
+</body>  
+</html>
