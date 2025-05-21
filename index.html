@@ -521,7 +521,8 @@
                     amountIn,  
                     useFlashLoan,  
                     flashLoanProvider  
-                ).send({ from: accounts[0] });  
+                ).send({ from: accounts[0],  
+                  gas: 3000000   });  
                 
                 logToTerminal("Arbitrage executed successfully!");  
                 showStatus("Transaction successful!", "success");  
